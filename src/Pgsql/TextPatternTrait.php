@@ -22,9 +22,10 @@ trait TextPatternTrait
     /**
      *
      * Regex alternatives matching the SQL that spells no placeholder, in the
-     * forms PostgreSQL reads them: the standard ones, plus two literals only
-     * PostgreSQL has. An escape string, `E'...'`, takes a backslash as an
-     * escape, so `E'it\'s ?'` is one literal. A dollar-quoted string,
+     * forms PostgreSQL reads them: the standard forms, PostgreSQL escape and
+     * dollar-quoted literals, and nested block comments. An escape string,
+     * `E'...'`, takes a backslash as an escape, so `E'it\'s ?'` is one
+     * literal. A dollar-quoted string,
      * `$$...$$` or `$tag$...$tag$`, ends only at the same tag, with nothing
      * escaped inside it; a `$` that follows an identifier character is part
      * of that identifier and opens none (#276). PostgreSQL reads bytes, and
@@ -44,6 +45,7 @@ trait TextPatternTrait
     {
         return "(?<!\\w)[Ee]'(?:[^'\\\\]|\\\\.|'')*+'"
             . '|(?<![\w$\x80-\xFF])\$(?<dollar_tag>(?:[A-Za-z_]\w*)?)\$.*?\$\k<dollar_tag>\$|'
+            . '(?<pgsql_comment>\/\*(?:[^*\/]++|\/(?!\*)|\*(?!\/)|(?&pgsql_comment))*\*\/)|'
             . parent::getTextPattern();
     }
 }

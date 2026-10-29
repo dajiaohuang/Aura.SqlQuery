@@ -30,6 +30,23 @@ class SelectTest extends Common\SelectTest
         );
     }
 
+    public function testNestedBlockCommentDoesNotConsumePositionalPlaceholders()
+    {
+        $this->query->cols(['id'])->from('items')->where(
+            'id = ? /* outer /* nested ? :hidden */ ? */ AND active = ?',
+            [7, 1]
+        );
+
+        $statement = $this->query->getStatement();
+        $this->assertStringContainsString(
+            '/* outer /* nested ? :hidden */ ? */',
+            $statement
+        );
+        $this->assertStringContainsString('id = :__1__', $statement);
+        $this->assertStringContainsString('active = :__2__', $statement);
+        $this->assertSame(['__1__' => 7, '__2__' => 1], $this->query->getBindValues());
+    }
+
     public static function provideNamesHeldFromABranch()
     {
         return array_merge(Common\SelectTest::provideNamesHeldFromABranch(), [
@@ -53,6 +70,8 @@ class SelectTest extends Common\SelectTest
             // PostgreSQL reads every byte from 0x80 up as an identifier
             // character, so a non-ASCII letter before $$ is part of the name
             'dollars after non-ASCII letter' => [['a'], 'é$$b = :a AND c$$d = 1'],
+            // PostgreSQL nests block comments, unlike the shared standard pattern.
+            'gap: nested block comment' => [[], 'c1 > 0 /* /* q */ :a */'],
         ]);
     }
 
